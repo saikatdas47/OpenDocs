@@ -10,7 +10,7 @@ void main() {
     await tester.pumpWidget(const OpenDocsApp());
     await tester.pumpAndSettle();
     expect(find.text('Open file'), findsOneWidget);
-    expect(find.text('A quiet place for your documents'), findsOneWidget);
+    expect(find.text('Your library is ready'), findsOneWidget);
     await tester.tap(find.byTooltip('Toggle theme'));
     await tester.pumpAndSettle();
     expect(

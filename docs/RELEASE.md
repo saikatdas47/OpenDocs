@@ -1,6 +1,6 @@
 # Release signing and local handoff
 
-Current version: 1.0.1+4. The ARM64 split APK versionCode is 2004.
+Current version: 1.0.2+5. The ARM64 split APK versionCode is 2005.
 
 The current signed APK is stored beside this repository in the parent OpenDocs folder. APK files and generated engine binaries are deliberately ignored by Git. Upload the APK as a GitHub Release attachment when you choose to publish it.
 

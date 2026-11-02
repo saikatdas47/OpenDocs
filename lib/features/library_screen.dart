@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/document_repository.dart';
@@ -118,23 +117,11 @@ class _LibraryScreenState extends State<LibraryScreen>
     }
   }
 
-  Future<void> _import({
-    bool demo = false,
-    DocumentFormat sampleFormat = DocumentFormat.pdf,
-  }) async {
+  Future<void> _import() async {
     if (busy) return;
     setState(() => busy = true);
     try {
-      final doc = demo
-          ? LocalDocument(
-              name: 'OpenDocs sample.${sampleFormat.name}',
-              path: 'sample.${sampleFormat.name}',
-              format: sampleFormat,
-              bytes: (await rootBundle.load(
-                'assets/sample.${sampleFormat.name}',
-              )).buffer.asUint8List(),
-            )
-          : await widget.repository.importDocument();
+      final doc = await widget.repository.importDocument();
       if (doc == null) return;
       final updated = [doc, ...documents.where((d) => d.path != doc.path)];
       await widget.repository.save(updated);
@@ -400,7 +387,7 @@ class _LibraryScreenState extends State<LibraryScreen>
     height: size,
     decoration: BoxDecoration(
       color: colorFor(d.format).withValues(alpha: .12),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(10),
     ),
     child: Icon(iconFor(d.format), color: colorFor(d.format), size: size * .52),
   );
@@ -427,7 +414,7 @@ class _LibraryScreenState extends State<LibraryScreen>
       return Card(
         margin: EdgeInsets.zero,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           onTap: () => _open(d),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -516,121 +503,132 @@ class _LibraryScreenState extends State<LibraryScreen>
   }
 
   Widget _hero(bool compact) {
-    final title = section == 1
-        ? 'Pick up where you left off.'
-        : section == 2
-        ? 'Your favorites, close at hand.'
-        : 'All your documents.\nOne calm space.';
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(compact ? 22 : 32),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xff242449), Color(0xff4c46a0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: Row(
+    final heading = ['Library', 'Recent', 'Favorites'][section];
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'YOUR OFFLINE READING SPACE',
-                    style: TextStyle(
-                      color: Color(0xffd3d1ff),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  title,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  heading,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: compact ? 25 : 34,
+                    fontSize: compact ? 30 : 36,
                     fontWeight: FontWeight.w700,
-                    height: 1.17,
-                    letterSpacing: -.8,
+                    letterSpacing: -1.2,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  '${documents.length} documents · PDF, Word & PowerPoint',
-                  style: const TextStyle(
-                    color: Color(0xffd3d1ee),
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xff433d90),
+              ),
+              FilledButton.icon(
+                onPressed: busy ? null : _import,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Open file'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(compact ? 22 : 28),
+            decoration: BoxDecoration(
+              color: const Color(0xff183e37),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'LESS WAITING. MORE REVISION.',
+                        style: TextStyle(
+                          color: Color(0xffabd7c3),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.4,
+                        ),
                       ),
-                      onPressed: busy ? null : () => _import(),
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Open file'),
+                      const SizedBox(height: 12),
+                      Text(
+                        section == 2
+                            ? 'Your essentials,\nready when you are.'
+                            : section == 1
+                            ? 'Back to your\nnext chapter.'
+                            : 'Focus on the next page.',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: compact ? 23 : 28,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -.7,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Your notes. Your slides. No ad breaks.',
+                        style: TextStyle(
+                          color: Color(0xffc7ded4),
+                          fontSize: 12,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.offline_bolt_outlined,
+                            color: Color(0xffabd7c3),
+                            size: 15,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Offline reader  ·  ${documents.length} documents',
+                              style: const TextStyle(
+                                color: Color(0xffabd7c3),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (!compact) ...[
+                  const SizedBox(width: 24),
+                  Transform.rotate(
+                    angle: -.08,
+                    child: Container(
+                      width: 90,
+                      height: 114,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xffe8eee5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.article_outlined,
+                            size: 28,
+                            color: Color(0xff227566),
+                          ),
+                          SizedBox(height: 12),
+                          Divider(color: Color(0xff98b5a8)),
+                          Divider(color: Color(0xff98b5a8)),
+                        ],
+                      ),
                     ),
-                    if (StorageBridge.supported)
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Color(0xff8983bc)),
-                        ),
-                        onPressed: scanning ? null : _scan,
-                        icon: const Icon(Icons.radar_rounded),
-                        label: const Text('Scan storage'),
-                      ),
-                    if (kIsWeb)
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Color(0xff8983bc)),
-                        ),
-                        onPressed: busy ? null : () => _import(demo: true),
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('Try sample PDF'),
-                      ),
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
           ),
-          if (!compact)
-            Container(
-              margin: const EdgeInsets.only(left: 24),
-              width: 122,
-              height: 144,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .09),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withValues(alpha: .15)),
-              ),
-              child: const Icon(
-                Icons.auto_stories_rounded,
-                color: Color(0xffcfcbff),
-                size: 68,
-              ),
-            ),
         ],
       ),
     );
@@ -657,7 +655,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Text(
-                      'Browser preview · Files stay in this tab; reload clears the list. Full Office layout and storage scanning are available in the Android app.',
+                      'Browser preview · Office conversion and device scanning are available in the Android app.',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -788,10 +786,10 @@ class _LibraryScreenState extends State<LibraryScreen>
                     query.isNotEmpty
                         ? 'No matching documents'
                         : section == 1
-                        ? 'Your next chapter starts here'
+                        ? 'No recent documents'
                         : section == 2
                         ? 'Keep your favorites here'
-                        : 'A quiet place for your documents',
+                        : 'Your library is ready',
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -839,39 +837,110 @@ class _LibraryScreenState extends State<LibraryScreen>
   }
 
   Widget _settings() => ListView(
-    padding: const EdgeInsets.all(24),
+    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
     children: [
       Text(
-        'Make yourself at home',
-        style: Theme.of(context).textTheme.headlineSmall
-            ?.copyWith(fontWeight: FontWeight.w700),
+        'Settings',
+        style: Theme.of(context).textTheme.headlineLarge
+            ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -1),
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 6),
+      Text(
+        'A reader that respects your time.',
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      ),
+      const SizedBox(height: 28),
+      Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xff183e37),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'THE STORY BEHIND OPENDOCS',
+              style: TextStyle(
+                color: Color(0xffa4cfc1),
+                fontSize: 10,
+                letterSpacing: 1.8,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Before an exam,\nevery minute matters.',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 27,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -.6,
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'When we revise from PPTX slides on our phones before an exam, opening a file can turn into a wait: slow loading, repeated ads and switching between third-party apps. I built OpenDocs to reduce that friction and work toward a faster, simpler way to read our slides and notes, offline and without ads.',
+              style: TextStyle(
+                color: Color(0xffdeebe5),
+                fontSize: 14,
+                height: 1.65,
+              ),
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Saikat Das',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 3),
+            Text(
+              'Creator of OpenDocs',
+              style: TextStyle(color: Color(0xffa4cfc1), fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 26),
+      _settingLabel('PREFERENCES'),
       Card(
         child: Column(
           children: [
             ListTile(
-              leading: const Icon(Icons.dark_mode_outlined),
+              leading: const Icon(Icons.contrast_rounded),
               title: const Text('Appearance'),
-              subtitle: const Text('Switch between light and dark'),
-              trailing: const Icon(Icons.chevron_right),
+              subtitle: Text(
+                Theme.of(context).brightness == Brightness.dark
+                    ? 'Dark theme'
+                    : 'Light theme',
+              ),
+              trailing: Switch(
+                value: Theme.of(context).brightness == Brightness.dark,
+                onChanged: (_) => widget.toggleTheme(),
+              ),
               onTap: widget.toggleTheme,
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_outlined),
+              title: const Text('Storage access'),
+              subtitle: Text(
+                StorageBridge.supported
+                    ? (allAccess
+                          ? 'Shared storage connected'
+                          : '$folders folders connected')
+                    : 'Managed on your Android device',
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: _permissionSheet,
             ),
             if (StorageBridge.supported) ...[
               ListTile(
-                leading: const Icon(Icons.security_outlined),
-                title: const Text('Storage access'),
-                subtitle: Text(
-                  allAccess
-                      ? 'Shared storage access enabled'
-                      : '$folders folders connected',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _permissionSheet,
-              ),
-              ListTile(
                 leading: const Icon(Icons.create_new_folder_outlined),
-                title: const Text('Connect another folder'),
+                title: const Text('Connect a folder'),
                 onTap: () async {
                   try {
                     if (await StorageBridge.chooseFolder()) {
@@ -886,84 +955,91 @@ class _LibraryScreenState extends State<LibraryScreen>
               ListTile(
                 leading: const Icon(Icons.folder_off_outlined),
                 title: const Text('Disconnect selected folders'),
-                subtitle: const Text('Does not delete any files'),
+                subtitle: const Text('Your original files stay untouched'),
                 onTap: () async {
                   await StorageBridge.forgetFolders();
                   await _accessStatus();
-                  _message(
-                    'Selected folder permissions removed. All-files access can be changed in Android Settings.',
-                  );
+                  _message('Selected folder access removed.');
                 },
               ),
             ],
           ],
         ),
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 24),
+      _settingLabel('ABOUT'),
       Card(
         child: Column(
           children: [
             ListTile(
-              leading: const Icon(Icons.lock_outline_rounded),
-              title: const Text('Private by design'),
-              subtitle: const Text(
-                'Your documents are read on this device. No account, upload or document server.',
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('Privacy'),
+              subtitle: const Text('On your device. Under your control.'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => _info(
+                'Your files stay yours',
+                'OpenDocs has no account, ads, analytics or document-upload service. Documents are read and converted on your Android device. Storage access is optional. Your original files are never changed when you remove a library entry.',
               ),
-            ),
-            const ListTile(
-              leading: Icon(Icons.info_outline_rounded),
-              title: Text('Reading formats'),
-              subtitle: Text(
-                'PDF and DOCX reading. PPT/PPTX slides are rendered offline as images into a PDF. Legacy DOC uses text reading. Missing fonts and complex Office effects can still differ.',
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.auto_stories_outlined),
-              title: const Text('Try sample documents'),
-              subtitle: const Text('PDF, Word, legacy DOC and PowerPoint'),
-              onTap: () async {
-                final format = await showModalBottomSheet<DocumentFormat>(
-                  context: context,
-                  showDragHandle: true,
-                  builder: (context) => SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final format in [
-                          DocumentFormat.pdf,
-                          DocumentFormat.docx,
-                          DocumentFormat.doc,
-                          DocumentFormat.pptx,
-                        ])
-                          ListTile(
-                            leading: Icon(iconFor(format)),
-                            title: Text('Sample ${format.label}'),
-                            onTap: () => Navigator.pop(context, format),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-                if (format != null) {
-                  await _import(demo: true, sampleFormat: format);
-                }
-              },
             ),
             ListTile(
               leading: const Icon(Icons.description_outlined),
-              title: const Text('OpenDocs 1.0'),
-              subtitle: const Text('Open-source software notices'),
-              trailing: const Icon(Icons.chevron_right),
+              title: const Text('Reading formats'),
+              subtitle: const Text('PDF · DOC · DOCX · PPT · PPTX'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => _info(
+                'Built for your documents',
+                'PDFs open directly. Word pages and PowerPoint slides become image-based PDFs, fully offline on Android. Image pages cannot be searched as text. Some unavailable fonts or advanced Office effects may look different.',
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.balance_outlined),
+              title: const Text('Licenses'),
+              subtitle: const Text('Third-party acknowledgements'),
+              trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => showLicensePage(
                 context: context,
                 applicationName: 'OpenDocs',
-                applicationVersion: '1.0.0',
+                applicationVersion: '1.0.2',
+                applicationLegalese: 'Created by Saikat Das. Third-party engines, libraries and fonts retain their respective licenses.',
               ),
             ),
           ],
         ),
       ),
+      const SizedBox(height: 24),
+      const Center(
+        child: Text(
+          'OpenDocs 1.0.2 · Made by Saikat Das',
+          style: TextStyle(fontSize: 12),
+        ),
+      ),
+      const SizedBox(height: 24),
     ],
+  );
+  Widget _settingLabel(String label) => Padding(
+    padding: const EdgeInsets.only(left: 4, bottom: 10),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 10,
+        letterSpacing: 1.5,
+        fontWeight: FontWeight.w700,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    ),
+  );
+  void _info(String title, String body) => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(body, style: const TextStyle(height: 1.6)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Got it'),
+        ),
+      ],
+    ),
   );
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -1016,9 +1092,11 @@ class _LibraryScreenState extends State<LibraryScreen>
           children: [
             if (wide) ...[
               NavigationRail(
+                extended: true,
+                minExtendedWidth: 190,
                 selectedIndex: section,
                 onDestinationSelected: (v) => setState(() => section = v),
-                labelType: NavigationRailLabelType.all,
+                labelType: NavigationRailLabelType.none,
                 destinations: const [
                   NavigationRailDestination(
                     icon: Icon(Icons.folder_outlined),
@@ -1043,7 +1121,15 @@ class _LibraryScreenState extends State<LibraryScreen>
               ),
               const VerticalDivider(width: 1),
             ],
-            Expanded(child: section == 3 ? _settings() : _library(!wide)),
+            Expanded(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1080),
+                  child: section == 3 ? _settings() : _library(!wide),
+                ),
+              ),
+            ),
           ],
         ),
         bottomNavigationBar: wide

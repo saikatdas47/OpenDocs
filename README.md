@@ -9,7 +9,7 @@ Open documents from your library, file manager or attachments, without sending t
 
 ![Android](https://img.shields.io/badge/Android-7%2B-3DDC84?logo=android&logoColor=white)
 ![Flutter](https://img.shields.io/badge/Built_with-Flutter-02569B?logo=flutter&logoColor=white)
-![Version](https://img.shields.io/badge/version-1.0.1-6559CC)
+![Version](https://img.shields.io/badge/version-1.0.2-6559CC)
 ![Offline](https://img.shields.io/badge/reading-fully_offline-6559CC)
 
 </div>
@@ -28,16 +28,17 @@ Image-based Office pages do not contain searchable text. Fonts that are unavaila
 
 ## Screenshots
 
-Captured from the Android app using included sample documents.
+The actual Flutter app interface, captured in the local Chrome preview. The listed documents are development-only fixtures; the Android app starts with your own library and has no sample-documents option.
 
-<table>
-<tr><th>Word · DOCX</th><th>PowerPoint · PPTX</th><th>Word · DOC</th></tr>
-<tr>
-<td><img src="docs/screenshots/docx.png" alt="DOCX page with formatting, table, image and Bengali text" width="250"></td>
-<td><img src="docs/screenshots/slides.png" alt="PowerPoint slides in the image PDF reader" width="250"></td>
-<td><img src="docs/screenshots/word.png" alt="Legacy DOC rendered as a page image" width="250"></td>
-</tr>
-</table>
+| Library | Favorites | Settings & creator story |
+| --- | --- | --- |
+| ![Library](docs/screenshots/library.png) | ![Favorites](docs/screenshots/favorites.png) | ![Settings](docs/screenshots/settings.png) |
+
+## Why I built OpenDocs
+
+Before an exam, we often revise from PPTX slides on our phones. Opening those slides can mean slow loading, repeated ads and switching between third-party apps. I built OpenDocs to reduce that friction and work toward a faster, simpler way to read our slides and notes, offline and without ad breaks.
+
+**Saikat Das · Creator of OpenDocs**
 
 ## Everyday features
 
@@ -52,14 +53,14 @@ Original documents are not modified. Temporary imports, metadata and converted P
 
 ## Install
 
-The current release is **1.0.1**, targeting **ARM64 Android 7+**. The signed APK is approximately **93.7 MB**, mainly because it includes a complete offline Office engine.
+The current release is **1.0.2**, targeting **ARM64 Android 7+**. The signed APK is approximately **93.6 MB**, mainly because it includes a complete offline Office engine.
 
-For this local handoff, `OpenDocs-1.0.1-offline-arm64.apk` is next to this repository folder. When publishing on GitHub, attach that file to a GitHub Release rather than committing it to the source repository. Android may ask you to allow installation from the app used to open the APK.
+For this local handoff, `OpenDocs-1.0.2-offline-arm64.apk` is next to this repository folder. When publishing on GitHub, attach that file to a GitHub Release rather than committing it to the source repository. Android may ask you to allow installation from the app used to open the APK.
 
 **APK SHA-256**
 
 ```text
-3e9711616f0c9593c36cc939d3e39cddecab807f0d2ef1af7abe9183e33fdf02
+2cdb162e87f467ee46ff61841eda215b0bd389fe4b93592f1eadf5e4c87b6b60
 ```
 
 ## Build from source
@@ -116,6 +117,8 @@ flutter analyze
 flutter test
 ```
 
+The interface was refreshed with a green-and-white workspace, a revision banner and compact Settings. Third-party legal notices remain available under Settings → Licenses; their full text is preserved for attribution.
+
 The current reader passed targeted Android 15 emulator checks for DOC, DOCX, PPTX and the image-PDF reader UI. Signed release DOC/DOCX conversion was also checked. The reported eight-slide presentation was visually checked in the Android conversion path. Physical phone coverage is still pending; rendering is not guaranteed identical for every Office document.
 
 Android protected/private folders cannot be scanned. Password-protected Office files need an unlocked copy. This project targets Android; the small web shell is a preview and does not contain the on-device Office engine.
@@ -131,3 +134,16 @@ Suggested description:
 > A private, fully offline Android reader for PDF, DOC/DOCX and PPT/PPTX, built with Flutter and on-device Office rendering.
 
 Suggested topics: `flutter`, `android`, `offline`, `pdf-reader`, `docx`, `pptx`, `libreoffice`.
+
+## Local UI preview
+
+The optional `lib/preview.dart` entry point shows a few local development documents for UI review. It is separate from the production Android entry point.
+
+```bash
+flutter build web --no-web-resources-cdn -t lib/preview.dart
+mkdir -p build/web/preview-files
+cp test/fixtures/sample.* build/web/preview-files/
+python3 -m http.server 8876 --bind 127.0.0.1 --directory build/web
+```
+
+Open `http://127.0.0.1:8876/` in Chrome. Full offline Office conversion and storage scanning run in the Android app.
