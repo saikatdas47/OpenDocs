@@ -1,2 +1,11 @@
-# Auto detect text files and perform LF normalization
+# Normalize source files; preserve document and media bytes.
 * text=auto
+*.pdf binary
+*.png binary
+*.doc binary
+*.docx binary
+*.ppt binary
+*.pptx binary
+*.jar binary
+*.so binary
+*.bat text eol=crlf
