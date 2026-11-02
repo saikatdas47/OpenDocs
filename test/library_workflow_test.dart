@@ -101,6 +101,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Report.pdf'), findsOneWidget);
     expect(find.text('Plan.docx'), findsOneWidget);
+    expect(find.text('(2)'), findsOneWidget);
+    expect(find.text('(1)'), findsNWidgets(2));
+    expect(find.text('(0)'), findsOneWidget);
     await tester.tap(find.widgetWithText(ChoiceChip, 'Word'));
     await tester.pumpAndSettle();
     expect(find.text('Report.pdf'), findsNothing);

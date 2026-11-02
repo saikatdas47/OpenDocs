@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../data/document_repository.dart';
+import '../data/document_thumbnails.dart';
+import '../data/reader_bookmarks.dart';
 
 class PdfReaderScreen extends StatefulWidget {
   const PdfReaderScreen({
     super.key,
     required this.document,
     this.positionKey,
+    this.thumbnailKey,
     this.onPosition,
     this.imageSlides = false,
     this.imageDocument = false,
@@ -17,6 +20,7 @@ class PdfReaderScreen extends StatefulWidget {
   final bool imageSlides;
   final bool imageDocument;
   final String? positionKey;
+  final String? thumbnailKey;
   final ValueChanged<int>? onPosition;
   final LocalDocument document;
   @override
@@ -27,7 +31,113 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   final controller = PdfViewerController();
   late final searcher = PdfTextSearcher(controller)..addListener(_refresh);
   int page = 1, pages = 0;
-  bool searching = false;
+  bool searching = false, savingBookmark = false;
+  List<int> bookmarks = [];
+  late final readerKey =
+      widget.thumbnailKey ?? DocumentThumbnails.keyFor(widget.document);
+  Future<void> _loadBookmarks() async {
+    final loaded = await ReaderBookmarks.load(readerKey);
+    if (mounted) setState(() => bookmarks = loaded);
+  }
+
+  Future<void> _toggleBookmark(int target) async {
+    if (savingBookmark) return;
+    setState(() => savingBookmark = true);
+    final updated = [...bookmarks];
+    if (!updated.remove(target)) updated.add(target);
+    updated.sort();
+    try {
+      await ReaderBookmarks.save(readerKey, updated);
+      if (mounted) setState(() => bookmarks = updated);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save this bookmark. Try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => savingBookmark = false);
+    }
+  }
+
+  Future<void> _showBookmarks() => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (context, refreshSheet) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .6,
+          child: Column(
+            children: [
+              const ListTile(
+                title: Text(
+                  'Bookmarks',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text('Keep important pages close for revision'),
+              ),
+              ListTile(
+                leading: Icon(
+                  bookmarks.contains(page)
+                      ? Icons.bookmark_remove_outlined
+                      : Icons.bookmark_add_outlined,
+                ),
+                title: Text(
+                  bookmarks.contains(page)
+                      ? 'Remove page $page bookmark'
+                      : 'Bookmark page $page',
+                ),
+                onTap: savingBookmark
+                    ? null
+                    : () async {
+                        await _toggleBookmark(page);
+                        if (context.mounted) refreshSheet(() {});
+                      },
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: bookmarks.where((p) => p <= pages).isEmpty
+                    ? const Center(child: Text('No saved pages yet.'))
+                    : ListView(
+                        children: [
+                          for (final target in bookmarks.where(
+                            (p) => p <= pages,
+                          ))
+                            ListTile(
+                              leading: const Icon(Icons.bookmark_rounded),
+                              title: Text(
+                                '${widget.imageSlides ? 'Slide' : 'Page'} $target',
+                              ),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                controller.goToPage(pageNumber: target);
+                              },
+                              trailing: IconButton(
+                                tooltip: 'Remove bookmark',
+                                icon: const Icon(Icons.close_rounded),
+                                onPressed: savingBookmark
+                                    ? null
+                                    : () async {
+                                        await _toggleBookmark(target);
+                                        if (context.mounted) {
+                                          refreshSheet(() {});
+                                        }
+                                      },
+                              ),
+                            ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
   void _refresh() {
     if (mounted) setState(() {});
   }
@@ -37,6 +147,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     super.initState();
     page = widget.document.position;
     searcher;
+    unawaited(_loadBookmarks().catchError((Object _) {}));
   }
 
   @override
@@ -61,6 +172,15 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         overflow: TextOverflow.ellipsis,
       ),
       actions: [
+        IconButton(
+          tooltip: 'Bookmarks',
+          onPressed: pages > 0 ? _showBookmarks : null,
+          icon: Icon(
+            bookmarks.contains(page)
+                ? Icons.bookmark_rounded
+                : Icons.bookmark_border_rounded,
+          ),
+        ),
         IconButton(
           tooltip: widget.imageSlides || widget.imageDocument
               ? 'Image pages have no searchable text'
@@ -122,6 +242,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             params: PdfViewerParams(
               onViewerReady: (document, _) {
                 if (mounted) setState(() => pages = document.pages.length);
+                unawaited(
+                  DocumentThumbnails.capture(
+                    readerKey,
+                    document,
+                  ).then<void>((_) {}).catchError((Object _) {}),
+                );
               },
               onPageChanged: (value) {
                 if (mounted) setState(() => page = value ?? 1);

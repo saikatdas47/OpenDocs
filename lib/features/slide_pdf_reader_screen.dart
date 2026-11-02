@@ -12,8 +12,13 @@ import 'pdf_reader_screen.dart';
 
 /// Slide geometry is rendered by the embedded Android office engine, then read as an image-only PDF.
 class SlidePdfReaderScreen extends StatefulWidget {
-  const SlidePdfReaderScreen({super.key, required this.document});
+  const SlidePdfReaderScreen({
+    super.key,
+    required this.document,
+    this.thumbnailKey,
+  });
   final LocalDocument document;
+  final String? thumbnailKey;
   @override
   State<SlidePdfReaderScreen> createState() => _SlidePdfReaderScreenState();
 }
@@ -102,6 +107,7 @@ class _SlidePdfReaderScreenState extends State<SlidePdfReaderScreen> {
           positionKey: widget.document.path,
           imageSlides: widget.document.format.isSlides,
           imageDocument: true,
+          thumbnailKey: widget.thumbnailKey,
         );
       }
       return Scaffold(

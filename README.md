@@ -9,7 +9,7 @@ Open documents from your library, file manager or attachments, without sending t
 
 ![Android](https://img.shields.io/badge/Android-7%2B-3DDC84?logo=android&logoColor=white)
 ![Flutter](https://img.shields.io/badge/Built_with-Flutter-02569B?logo=flutter&logoColor=white)
-![Version](https://img.shields.io/badge/version-1.0.2-6559CC)
+![Version](https://img.shields.io/badge/version-1.0.3-6559CC)
 ![Offline](https://img.shields.io/badge/reading-fully_offline-6559CC)
 
 </div>
@@ -28,7 +28,7 @@ Image-based Office pages do not contain searchable text. Fonts that are unavaila
 
 ## Screenshots
 
-The actual Flutter app interface, captured in the local Chrome preview. The listed documents are development-only fixtures; the Android app starts with your own library and has no sample-documents option.
+The actual Android app interface, captured on an Android 15 emulator. The listed documents are development-only fixtures; the Android app starts with your own library and has no sample-documents option.
 
 | Library | Favorites | Settings & creator story |
 | --- | --- | --- |
@@ -47,20 +47,24 @@ Before an exam, we often revise from PPTX slides on our phones. Opening those sl
 - Open or share supported documents from other Android apps.
 - Zoom, navigate pages and resume reading where you stopped.
 - Find documents quickly with format filters, favorites and recent history.
+- See PDF, Word and Slides counts beside their filters.
+- Read a compact list or grid with first-page thumbnails. PDF previews are generated lazily; Word/PowerPoint previews appear after the first successful opening.
+- Bookmark important pages or slides and jump back to them for revision.
+- Clear regenerated reader cache from Settings while keeping original files, imports, favorites, bookmarks and reading positions.
 - Switch between light and dark themes.
 
 Original documents are not modified. Temporary imports, metadata and converted PDFs stay in private local storage. The release manifest has no Internet permission. See [Privacy](PRIVACY.md).
 
 ## Install
 
-The current release is **1.0.2**, targeting **ARM64 Android 7+**. The signed APK is approximately **93.6 MB**, mainly because it includes a complete offline Office engine.
+The current release is **1.0.3**, targeting **ARM64 Android 7+**. The signed APK is approximately **93.7 MB**, mainly because it includes a complete offline Office engine.
 
-For this local handoff, `OpenDocs-1.0.2-offline-arm64.apk` is next to this repository folder. When publishing on GitHub, attach that file to a GitHub Release rather than committing it to the source repository. Android may ask you to allow installation from the app used to open the APK.
+For this local handoff, `OpenDocs-1.0.3-offline-arm64.apk` is next to this repository folder. When publishing on GitHub, attach that file to a GitHub Release rather than committing it to the source repository. Android may ask you to allow installation from the app used to open the APK.
 
 **APK SHA-256**
 
 ```text
-2cdb162e87f467ee46ff61841eda215b0bd389fe4b93592f1eadf5e4c87b6b60
+fcee4c3421a6817f0a80ba3f121752b302705254126e5fe69a694ec870c9f7eb
 ```
 
 ## Build from source
@@ -102,7 +106,7 @@ Local files / Android Open with / Share
                          → image-only PDF reader
 ```
 
-- `lib/data` manages local documents, storage access and reading metadata.
+- `lib/data` manages local documents, storage access, bookmarks, reading metadata and bounded thumbnail caches.
 - `lib/features` contains the library and reader screens.
 - `android/app/src/main/kotlin` handles Android file access and isolated Office conversion.
 - `android/app/src/main/java/org/libreoffice/kit` contains matching LibreOfficeKit bindings.
@@ -117,9 +121,11 @@ flutter analyze
 flutter test
 ```
 
-The interface was refreshed with a green-and-white workspace, a revision banner and compact Settings. Third-party legal notices remain available under Settings → Licenses; their full text is preserved for attribution.
+The interface uses a green-and-white workspace, a compact revision banner and count-bearing format filters. Third-party legal notices remain available under Settings → Licenses; their full text is preserved for attribution.
 
-The current reader passed targeted Android 15 emulator checks for DOC, DOCX, PPTX and the image-PDF reader UI. Signed release DOC/DOCX conversion was also checked. The reported eight-slide presentation was visually checked in the Android conversion path. Physical phone coverage is still pending; rendering is not guaranteed identical for every Office document.
+Version 1.0.3 passed eight targeted local tests plus Android checks for actual PDF bookmark persistence, PNG thumbnail generation, safe cache cleanup, and the Library/Favorites/Settings interface. Cache cleanup was verified to preserve a private original file and bookmark/favorite metadata.
+
+Earlier versions of the same conversion engine passed targeted Android 15 emulator checks for DOC, DOCX, PPTX and the image-PDF reader UI. Signed release DOC/DOCX conversion was also checked. The reported eight-slide presentation was visually checked in the Android conversion path. Physical phone coverage is still pending; rendering is not guaranteed identical for every Office document.
 
 Android protected/private folders cannot be scanned. Password-protected Office files need an unlocked copy. This project targets Android; the small web shell is a preview and does not contain the on-device Office engine.
 
@@ -129,9 +135,9 @@ The app bundles LibreOfficeKit **26.2.6.3**, with matching Java bindings and pre
 
 ## GitHub repository details
 
-Suggested description:
+Repository description:
 
-> A private, fully offline Android reader for PDF, DOC/DOCX and PPT/PPTX, built with Flutter and on-device Office rendering.
+> An ad-free, fully offline Android reader for PDF, Word and PowerPoint, with on-device rendering, page bookmarks and first-page previews.
 
 Suggested topics: `flutter`, `android`, `offline`, `pdf-reader`, `docx`, `pptx`, `libreoffice`.
 

@@ -1,6 +1,6 @@
 # Release signing and local handoff
 
-Current version: 1.0.2+5. The ARM64 split APK versionCode is 2005.
+Current version: 1.0.3+6. The ARM64 split APK versionCode is 2006.
 
 The current signed APK is stored beside this repository in the parent OpenDocs folder. APK files and generated engine binaries are deliberately ignored by Git. Upload the APK as a GitHub Release attachment when you choose to publish it.
 
@@ -30,3 +30,5 @@ flutter build apk --release --target-platform android-arm64 --split-per-abi
 ## Push this repository
 
 The existing Git repository and remote are preserved. The handoff is committed locally; no remote push or GitHub release upload is performed. Use GitHub Desktop's Push origin or run `git push` from this folder.
+
+Generated build directories and the local engine extraction are removed after the final handoff. Run `python3 scripts/prepare_engine.py` and `flutter pub get` before rebuilding. The signed APK contains the full engine and works offline without this setup.

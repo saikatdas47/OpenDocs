@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/document_repository.dart';
 import 'pdf_reader_screen.dart';
 import 'office_reader_screen.dart';
+import 'document_thumbnail.dart';
+import '../data/document_thumbnails.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({
@@ -158,6 +160,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               ? PdfReaderScreen(
                   document: resolved,
                   positionKey: doc.path,
+                  thumbnailKey: DocumentThumbnails.keyFor(doc),
                   onPosition: (page) {
                     final i = documents.indexWhere((d) => d.path == doc.path);
                     if (i >= 0) {
@@ -165,7 +168,10 @@ class _LibraryScreenState extends State<LibraryScreen>
                     }
                   },
                 )
-              : OfficeReaderScreen(document: resolved),
+              : OfficeReaderScreen(
+                  document: resolved,
+                  thumbnailKey: DocumentThumbnails.keyFor(doc),
+                ),
         ),
       );
     } on FormatException catch (e) {
@@ -423,7 +429,11 @@ class _LibraryScreenState extends State<LibraryScreen>
               children: [
                 Row(
                   children: [
-                    _badge(d),
+                    DocumentThumbnail(
+                      document: d,
+                      fallback: _badge(d),
+                      size: 42,
+                    ),
                     const Spacer(),
                     IconButton(
                       tooltip: d.favorite
@@ -467,10 +477,13 @@ class _LibraryScreenState extends State<LibraryScreen>
       );
     }
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: _badge(d),
+        dense: true,
+        minVerticalPadding: 6,
+        visualDensity: const VisualDensity(vertical: -2),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        leading: DocumentThumbnail(document: d, fallback: _badge(d), size: 42),
         title: Text(
           d.name,
           maxLines: 1,
@@ -478,10 +491,8 @@ class _LibraryScreenState extends State<LibraryScreen>
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(
-            '${d.format.label}  ·  ${formatBytes(d.size)}  ·  ${d.owned ? 'Imported' : 'On device'}',
-          ),
+          padding: const EdgeInsets.only(top: 3),
+          child: Text('${d.format.label}  ·  ${formatBytes(d.size)}'),
         ),
         onTap: () => _open(d),
         trailing: Row(
@@ -531,7 +542,10 @@ class _LibraryScreenState extends State<LibraryScreen>
           const SizedBox(height: 20),
           Container(
             width: double.infinity,
-            padding: EdgeInsets.all(compact ? 22 : 28),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 18 : 24,
+              vertical: compact ? 16 : 22,
+            ),
             decoration: BoxDecoration(
               color: const Color(0xff183e37),
               borderRadius: BorderRadius.circular(18),
@@ -575,7 +589,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                           height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           const Icon(
@@ -634,6 +648,17 @@ class _LibraryScreenState extends State<LibraryScreen>
     );
   }
 
+  int _formatCount(String label) => documents.where((d) {
+    if (section == 1 && d.lastOpened == 0) return false;
+    if (section == 2 && !d.favorite) return false;
+    return switch (label) {
+      'PDF' => d.format == DocumentFormat.pdf,
+      'Word' => d.format.isWord,
+      'Slides' => d.format.isSlides,
+      _ => true,
+    };
+  }).length;
+
   Widget _library(bool compact) {
     final items = visible;
     return CustomScrollView(
@@ -686,7 +711,20 @@ class _LibraryScreenState extends State<LibraryScreen>
                           (label) => Padding(
                             padding: const EdgeInsets.only(right: 10),
                             child: ChoiceChip(
-                              label: Text(label),
+                              label: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(label),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    '(${_formatCount(label)})',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               selected: filter == label,
                               onSelected: (_) => setState(() => filter = label),
                               showCheckmark: false,
@@ -820,7 +858,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                 ? SliverGrid.builder(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: compact ? 2 : 3,
-                      mainAxisExtent: 190,
+                      mainAxisExtent: 168,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
@@ -834,6 +872,47 @@ class _LibraryScreenState extends State<LibraryScreen>
           ),
       ],
     );
+  }
+
+  Future<void> _clearCache() async {
+    try {
+      final info = StorageBridge.supported
+          ? await StorageBridge.channel.invokeMapMethod<String, dynamic>(
+                  'readerCacheInfo',
+                ) ??
+                {}
+          : <String, dynamic>{};
+      if (!mounted) return;
+      final bytes = (info['bytes'] as num?)?.toInt();
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Clear reader cache?'),
+          content: Text(
+            'Remove ${bytes == null ? 'cached previews' : '${formatBytes(bytes)} of cached previews'} and converted page images. Your original files, imported documents, favorites, bookmarks and reading positions stay. Previews and conversions will be recreated when needed.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Keep'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Clear cache'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      final result = await DocumentThumbnails.clearCache();
+      _message(
+        '${formatBytes((result['freed'] as num?)?.toInt() ?? 0)} of reader cache cleared.',
+      );
+    } catch (_) {
+      _message(
+        'Close the reader or wait for conversion to finish, then try again.',
+      );
+    }
   }
 
   Widget _settings() => ListView(
@@ -925,6 +1004,13 @@ class _LibraryScreenState extends State<LibraryScreen>
               onTap: widget.toggleTheme,
             ),
             ListTile(
+              leading: const Icon(Icons.cleaning_services_outlined),
+              title: const Text('Clear reader cache'),
+              subtitle: const Text('Free space without deleting documents'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: _clearCache,
+            ),
+            ListTile(
               leading: const Icon(Icons.folder_outlined),
               title: const Text('Storage access'),
               subtitle: Text(
@@ -999,7 +1085,7 @@ class _LibraryScreenState extends State<LibraryScreen>
               onTap: () => showLicensePage(
                 context: context,
                 applicationName: 'OpenDocs',
-                applicationVersion: '1.0.2',
+                applicationVersion: '1.0.3',
                 applicationLegalese: 'Created by Saikat Das. Third-party engines, libraries and fonts retain their respective licenses.',
               ),
             ),
@@ -1009,7 +1095,7 @@ class _LibraryScreenState extends State<LibraryScreen>
       const SizedBox(height: 24),
       const Center(
         child: Text(
-          'OpenDocs 1.0.2 · Made by Saikat Das',
+          'OpenDocs 1.0.3 · Made by Saikat Das',
           style: TextStyle(fontSize: 12),
         ),
       ),

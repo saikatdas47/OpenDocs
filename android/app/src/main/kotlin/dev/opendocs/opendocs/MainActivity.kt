@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MainActivity : FlutterActivity() {
     private val executor = Executors.newSingleThreadExecutor()
     private val scanning = AtomicBoolean(false)
+    private val cacheClearing = AtomicBoolean(false)
     private var channel: MethodChannel? = null
     private var slideConverter: SlideConversionClient? = null
     private var accessResult: MethodChannel.Result? = null
@@ -35,7 +36,22 @@ class MainActivity : FlutterActivity() {
         slideConverter = SlideConversionClient(this, channel!!)
         channel!!.setMethodCallHandler { call, result ->
             when (call.method) {
-                "convertSlides" -> { val path=call.argument<String>("path"); if(path==null) result.error("SLIDES","Choose a presentation first.",null) else slideConverter!!.convert(path,result) }
+                "readerCacheInfo", "clearReaderCache" -> {
+                    if (slideConverter?.isBusy == true || cacheClearing.get()) result.error("BUSY", "Wait for document conversion to finish.", null)
+                    else {
+                      if (call.method == "clearReaderCache") cacheClearing.set(true)
+                      executor.execute {
+                        try {
+                            val dirs = listOf("slide-pdf", "slide-input", "thumbnails").map { File(cacheDir, it) }
+                            val before = dirs.sumOf { dir -> if (dir.exists()) dir.walkTopDown().filter { it.isFile }.sumOf { it.length() } else 0L }
+                            if (call.method == "clearReaderCache") dirs.forEach { if(it.exists()) check(it.deleteRecursively()) }
+                            runOnUiThread { result.success(mapOf("bytes" to before, "freed" to if(call.method == "clearReaderCache") before else 0L)) }
+                        } catch (_: Exception) { runOnUiThread { result.error("CACHE", "Could not clear reader cache. Try again.", null) } }
+                        finally { cacheClearing.set(false) }
+                      }
+                    }
+                }
+                "convertSlides" -> { if (cacheClearing.get()) { result.error("BUSY", "Wait for cache cleanup to finish.", null); return@setMethodCallHandler }; val path=call.argument<String>("path"); if(path==null) result.error("SLIDES","Choose a presentation first.",null) else slideConverter!!.convert(path,result) }
                 "cancelSlides" -> { slideConverter?.cancel(); result.success(null) }
                 "accessStatus" -> result.success(mapOf("allFiles" to hasAccess(), "folders" to folders().size))
                 "requestAccess" -> requestAccess(result)

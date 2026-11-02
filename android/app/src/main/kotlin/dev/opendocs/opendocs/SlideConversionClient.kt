@@ -5,6 +5,7 @@ import android.os.*
 import io.flutter.plugin.common.MethodChannel
 
 class SlideConversionClient(private val context: Context, private val channel: MethodChannel) {
+    val isBusy: Boolean get() = result != null
     private var result: MethodChannel.Result? = null
     private var remote: Messenger? = null
     private var connection: ServiceConnection? = null
